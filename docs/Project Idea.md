@@ -27,3 +27,6 @@ This document will outline a project idea so that it can be used as reference fo
 
 ## Personnel and Experience
 *Who will be working on the project? What are their roles and responsibilities? What is their experience level and how will that impact the project? This is important to consider when planning the project and assigning tasks.*
+
+## References
+*Any external resources that will help align the goals of hte project. This includes links, documents, etc.*
