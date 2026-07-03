@@ -6,17 +6,20 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 
 ## Phase 0 — Project Scaffolding
 
-**Goal:** A running Next.js app with the chosen toolchain wired up and CI passing.
+**Goal:** A running Vite + React app with the chosen toolchain wired up and CI passing.
 
 ### Tasks
 
-- [ ] Bootstrap Next.js 15 project with TypeScript (`npx create-next-app@latest`)
-- [ ] Configure Tailwind CSS (dark mode via `class` strategy)
-- [ ] Add Zustand (`zustand`) and `zustand/middleware` (persist)
-- [ ] Add Framer Motion (`framer-motion`)
+- [ ] Bootstrap Vite + React + TypeScript project (`npm create vite@latest -- --template react-ts`)
+- [ ] Add React Router v7 (`react-router-dom`)
+- [ ] Configure Tailwind CSS (dark mode via `class` strategy; add custom `@keyframes` for dice roll animation)
 - [ ] Configure Vitest + React Testing Library
 - [ ] Add ESLint + Prettier with agreed rules
-- [ ] Set up GitHub Actions: lint → type-check → test on every push
+- [ ] Add `Dockerfile` (multi-stage Node 22 build → Nginx production image)
+- [ ] Add `nginx.conf` (SPA fallback routing + immutable asset cache headers)
+- [ ] Add `docker-compose.yml` (`dev` service with HMR volume mount; `prod` service under `prod` profile)
+- [ ] Add `.devcontainer/devcontainer.json` for VS Code Dev Container support
+- [ ] Set up GitHub Actions: lint → type-check → test → Docker build on every push
 - [ ] Deploy skeleton to Vercel; verify automatic preview deploys on PRs
 - [ ] Write a single smoke test that renders the root page
 
@@ -25,6 +28,10 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 - `npm run dev` starts the app with no errors
 - `npm run build` produces a clean production build
 - `npm test` runs and the smoke test passes
+- `docker compose up dev` serves the app at `localhost:5173` with hot reload
+- `docker compose --profile prod up prod` serves the production build at `localhost:8080`
+- `docker build -t turn-zero .` produces an image under 50 MB
+- Opening the repo in a VS Code Dev Container installs dependencies and forwards port 5173 automatically
 - A GitHub Actions pipeline passes on the main branch
 - A Vercel preview URL is accessible
 
@@ -37,7 +44,7 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 ### Tasks
 
 - [ ] Design the `GameSession` TypeScript interface (see `ARCHITECTURE.md`)
-- [ ] Implement `gameSessionStore` with Zustand + localStorage persistence
+- [ ] Implement `GameSessionContext` with `useReducer` and `localStorage` persistence via `useEffect`
 - [ ] Build `createSession(bluePlayerName, redPlayerName): GameSession` factory
 - [ ] Landing page UI: player name inputs, "Start Game" button
 - [ ] Resume banner: if a session exists in storage, offer to resume or start fresh
@@ -240,11 +247,11 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 
 ### Tasks
 
-- [ ] Add `next-pwa` or custom Service Worker for offline caching
+- [ ] Add `vite-plugin-pwa` for Service Worker and offline caching
 - [ ] Web app manifest with icon set (legion-themed icon)
 - [ ] Dark mode default (game store lighting)
 - [ ] Accessibility audit: all interactive elements have correct ARIA labels, touch targets ≥ 44px
-- [ ] Animate step transitions (Framer Motion `AnimatePresence`)
+- [ ] Animate step transitions (Tailwind `transition-opacity`/`animate-in`; evaluate adding Motion for exit animations if needed)
 - [ ] Haptic feedback on dice roll (navigator.vibrate where supported)
 - [ ] Performance audit: Lighthouse score ≥ 90 on mobile
 

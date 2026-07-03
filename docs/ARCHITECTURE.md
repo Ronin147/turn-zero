@@ -18,28 +18,38 @@ This document covers the technical decisions, data models, and key design patter
 
 ## Technology Decisions
 
-### Next.js 15 (App Router) + TypeScript
+### Vite + React + TypeScript
 
-- Server components for the landing/lobby page
-- Client components for the stateful Turn Zero flow (no server round-trips during gameplay)
+- Lightning-fast dev server (HMR) — no server-side rendering needed for a game companion tool
+- Pure client-side SPA is the right fit: all state is local, no data fetching from a server
 - TypeScript enforces correct game state shapes throughout
+
+### React Router v7
+
+- Client-side routing between setup steps
+- Familiar API, widely documented
+- Nested routes map cleanly to the setup sub-steps
 
 ### Tailwind CSS
 
 - Rapid mobile UI development
 - Dark mode support out of the box (important for a dimly lit game store)
 - No runtime CSS-in-JS overhead
+- Built-in animation utilities (`animate-spin`, `transition-*`, `duration-*`) plus custom `@keyframes` in `tailwind.config.ts` cover all MVP animation needs — no additional animation library required
 
-### Zustand
+### React Context + `useReducer`
 
-- Lightweight, no-boilerplate state management
-- Easy to persist to `localStorage` with `persist` middleware
-- One store per game session
+- Built into React — no additional package needed
+- A single `GameSessionContext` wraps the app and provides state + dispatch to all route components
+- All state mutations are named reducer actions, which maps cleanly onto the Turn Zero state machine (each step transition, each deck operation, each modification action is a discrete action type)
+- `localStorage` persistence is handled by a `useEffect` that serializes state on every change and rehydrates on mount — ~5 lines, no middleware needed
 
-### Framer Motion
+### Motion (prev. Framer Motion)
 
 - Step transition animations make it clear to players the flow is progressing
 - Dice roll animation adds tactile feel to the Blue Player determination step
+
+> **Note:** Motion is deferred post-MVP. Tailwind's built-in animation utilities and custom `@keyframes` cover all MVP animation needs. Motion can be revisited in Phase 9 (Polish) if exit animations are desired.
 
 ### Vitest + React Testing Library
 
@@ -54,11 +64,11 @@ This document covers the technical decisions, data models, and key design patter
 ┌─────────────────────────────────────────────────────┐
 │  UI Layer  (React components / Tailwind)            │
 │  • Step pages, dice roller, mission dashboard       │
-│  • Reads from store, dispatches actions             │
+│  • Reads from context, dispatches actions           │
 ├─────────────────────────────────────────────────────┤
-│  Store Layer  (Zustand)                             │
-│  • gameSessionStore  — full Turn Zero state         │
-│  • Persisted to localStorage                        │
+│  State Layer  (React Context + useReducer)          │
+│  • GameSessionContext — full Turn Zero state        │
+│  • Persisted to localStorage via useEffect          │
 ├─────────────────────────────────────────────────────┤
 │  Game Logic Layer  (pure TypeScript, no React)      │
 │  • dice.ts      — black attack die simulation       │
@@ -194,7 +204,7 @@ interface PreparedPositionUnit {
 }
 ```
 
-### Game Session (root store shape)
+### Game Session (root context shape)
 
 ```typescript
 type SetupStep =
@@ -329,7 +339,7 @@ function discardRevealed(deck: PlayerDeck): PlayerDeck {
 
 ```
 /                         → Landing page (new game / resume game)
-/setup                    → Turn Zero flow (client component, full state)
+/setup                    → Turn Zero flow root (redirects to current step)
 /setup/terrain            → Terrain declaration & placement
 /setup/blue-player        → Dice roll
 /setup/mission            → Mission dashboard + modification
@@ -338,7 +348,7 @@ function discardRevealed(deck: PlayerDeck): PlayerDeck {
 /setup/complete           → Summary & hand-off to game
 ```
 
-All `/setup/*` routes read from and write to the same Zustand store. Navigation between sub-routes is controlled by the step machine (the URL does not drive state; state drives the URL).
+All `/setup/*` routes read from and write to the same `GameSessionContext`. Navigation between sub-routes is controlled by the step machine (the URL does not drive state; state drives the URL). React Router's `<Navigate>` is used to redirect the user back to their current step if they try to deep-link ahead.
 
 ---
 
@@ -346,7 +356,7 @@ All `/setup/*` routes read from and write to the same Zustand store. Navigation 
 
 | Scenario | Strategy |
 |---|---|
-| Single device, two players | Both players share one device; state in `localStorage` |
+| Single device, two players | Both players share one device; state in `localStorage` via `useEffect` |
 | Two devices, local network | Future: WebSocket room via a lightweight server |
 | Two devices, remote play | Future: Supabase Realtime or Pusher |
 
@@ -358,8 +368,61 @@ For the initial release, single-device mode with `localStorage` persistence cove
 
 | Test type | Coverage target | Location |
 |---|---|---|
-| Unit | All game logic functions (dice, deck, state machine guards) | `lib/game/__tests__/` |
-| Component | Step pages — happy path + key error states | `components/setup/__tests__/` |
-| Integration | Full Turn Zero flow from step 1 to complete | `app/__tests__/` |
+| Unit | All game logic functions (dice, deck, state machine guards) | `src/lib/game/__tests__/` |
+| Component | Step pages — happy path + key error states | `src/components/setup/__tests__/` |
+| Integration | Full Turn Zero flow from step 1 to complete | `src/__tests__/` |
 
 Game logic is intentionally decoupled from React so it can be tested without any rendering overhead.
+
+---
+
+## Docker Architecture
+
+This is a pure static SPA — Docker's role is dev environment consistency and portable production serving, not running application server logic.
+
+### Production Image (multi-stage)
+
+```
+┌─────────────────────────────────────┐
+│  Stage 1: builder  (node:22-alpine) │
+│  • npm ci                           │
+│  • npm run build  →  /app/dist      │
+└─────────────────┬───────────────────┘
+                  │ COPY dist/
+┌─────────────────▼───────────────────┐
+│  Stage 2: production (nginx:stable- │
+│           alpine)                   │
+│  • Serves /usr/share/nginx/html     │
+│  • nginx.conf: SPA fallback +       │
+│    immutable asset cache headers    │
+│  • Exposes port 80                  │
+└─────────────────────────────────────┘
+```
+
+The final image contains only Nginx and the compiled static assets — no Node, no source code. Typical image size: ~25 MB.
+
+### Nginx SPA Routing
+
+React Router v7 uses client-side routing. Without the `try_files` fallback, a hard refresh on any route other than `/` would 404. `nginx.conf` handles this:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+Static assets (JS, CSS, fonts, images) are served with `Cache-Control: public, immutable` and a 1-year expiry — safe because Vite content-hashes all asset filenames at build time.
+
+### Docker Compose Services
+
+| Service | Base image | Port | Profile | Purpose |
+|---|---|---|---|---|
+| `dev` | `node:22-alpine` | 5173 | *(default)* | Vite dev server with HMR; `src/` volume-mounted |
+| `prod` | Built from `Dockerfile` | 8080→80 | `prod` | Local production image verification |
+
+The `node_modules` volume prevents the host and container copies from conflicting when running `dev`.
+
+### Dev Container
+
+`.devcontainer/devcontainer.json` targets `node:22-alpine` directly (not Compose) so VS Code's Remote Containers extension can attach and install extensions inside the container. Port 5173 is forwarded automatically and `npm install` runs on container creation.
+
