@@ -44,13 +44,6 @@ This document covers the technical decisions, data models, and key design patter
 - All state mutations are named reducer actions, which maps cleanly onto the Turn Zero state machine (each step transition, each deck operation, each modification action is a discrete action type)
 - `localStorage` persistence is handled by a `useEffect` that serializes state on every change and rehydrates on mount — ~5 lines, no middleware needed
 
-### Motion (prev. Framer Motion)
-
-- Step transition animations make it clear to players the flow is progressing
-- Dice roll animation adds tactile feel to the Blue Player determination step
-
-> **Note:** Motion is deferred post-MVP. Tailwind's built-in animation utilities and custom `@keyframes` cover all MVP animation needs. Motion can be revisited in Phase 9 (Polish) if exit animations are desired.
-
 ### Vitest + React Testing Library
 
 - Game logic in `lib/game/` is pure functions — unit tested independently of React

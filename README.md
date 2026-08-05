@@ -17,13 +17,11 @@ This process involves alternating decisions, dice rolls, deck reveals, and conte
 | Feature | Description |
 |---|---|
 | **Step Tracker** | Visual progress indicator through all 8 Setup phases |
-| **Blue Player Determination** | Simulated 4-die black attack dice roll with tiebreaker logic |
+| **Blue Player Determination** | Simulated 4-die black attack dice roll with tiebreaker logic. allow for direct submission |
 | **Mission Builder** | Virtual Battle Deck system (Objective, Secondary Objective, Advantage) with reveal, discard, and replace flow |
 | **Mission Modification Tracker** | Enforces the 2-modification-per-player limit with turn order |
-| **Setup Effects Checklist** | Prompt for relevant keyword effects (Bounty, Cache, Covert Ops, etc.) |
-| **Prepared Position Deployment** | Alternating deployment tracker starting with blue player |
-| **Terrain Tracker** | Record agreed terrain pieces and their rule classifications |
 | **Session Persistence** | Game state saved locally so a session can survive a phone sleep |
+| **Score Tracker** | Keeps track of score for the missions as they complete rounds during the game. |
 
 ---
 

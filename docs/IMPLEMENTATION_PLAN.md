@@ -20,7 +20,6 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 - [ ] Add `docker-compose.yml` (`dev` service with HMR volume mount; `prod` service under `prod` profile)
 - [ ] Add `.devcontainer/devcontainer.json` for VS Code Dev Container support
 - [ ] Set up GitHub Actions: lint → type-check → test → Docker build on every push
-- [ ] Deploy skeleton to Vercel; verify automatic preview deploys on PRs
 - [ ] Write a single smoke test that renders the root page
 
 ### Acceptance Criteria
@@ -33,8 +32,6 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 - `docker build -t turn-zero .` produces an image under 50 MB
 - Opening the repo in a VS Code Dev Container installs dependencies and forwards port 5173 automatically
 - A GitHub Actions pipeline passes on the main branch
-- A Vercel preview URL is accessible
-
 ---
 
 ## Phase 1 — Landing Page & Session Management
