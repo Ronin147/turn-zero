@@ -24,7 +24,7 @@ This document lays out the phased development roadmap for Turn Zero. Each phase 
 
 ### Acceptance Criteria
 
-- `npm run dev` starts the app with no errors
+- `npm run dev` starts the app with no errors, but we want to use the launch settings from VSCode
 - `npm run build` produces a clean production build
 - `npm test` runs and the smoke test passes
 - `docker compose up dev` serves the app at `localhost:5173` with hot reload
